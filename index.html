@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Rota Demo — Fluxo de Ocorrências</title>
+  <meta name="description" content="Demonstração de gestão de ocorrências rodoviárias com dados inteiramente sintéticos. Explore o fluxo da abertura à resolução.">
+  <meta name="theme-color" content="#141a2b">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#inicio">Pular para o conteúdo</a>
+  <header class="app-header">
+    <a class="brand-mark" href="#inicio" aria-label="Rota Demo, início">R<span>↗</span></a>
+    <h1 class="brand">ROTA DEMO<small>Fluxo de ocorrências rodoviárias</small></h1>
+    <nav class="nav">
+      <button data-view="painel" class="active">Painel <span class="badge" id="badgeAtivas">0</span></button>
+      <button data-view="nova">+ Nova</button>
+      <button data-view="cadastros">Cadastros</button>
+      <button data-view="historico">Histórico</button>
+    </nav>
+  </header>
+
+  <main id="inicio">
+    <section class="demo-intro" aria-labelledby="intro-title">
+      <div>
+        <p class="eyebrow"><span class="live-dot"></span> PROJETO DE PORTFÓLIO · DADOS SINTÉTICOS</p>
+        <h2 id="intro-title">Da abertura à resolução<span>.</span></h2>
+        <p>Acompanhe o atendimento, registre decisões e mantenha cada etapa à vista.</p>
+      </div>
+      <div class="demo-actions">
+        <button class="btn yellow" id="demoExemplo">Experimentar uma abertura ↗</button>
+        <button class="btn ghost" id="demoReset">Restaurar demonstração</button>
+      </div>
+      <details class="demo-tour"><summary>Como explorar esta demonstração</summary>
+        <ol><li>Abra os detalhes de um card e registre uma medida na linha do tempo.</li><li>Conclua o S.O.S. dos passageiros para pausar o tempo principal.</li><li>Finalize a ocorrência e consulte o histórico; você também pode reabri-la.</li><li>Experimente os filtros, cadastros e exportações. Restaure os cenários quando quiser.</li></ol>
+        <p>Empresas, pessoas, veículos e locais são fictícios. Use somente dados de teste. As alterações ficam neste navegador; o resumo é apenas copiado.</p>
+      </details>
+    </section>
+    <p id="demoNotice" class="demo-notice" role="status" aria-live="polite">Ambiente de demonstração · Nenhuma mensagem é enviada · Alterações salvas neste navegador.</p>
+    <!-- ===================== PAINEL ===================== -->
+    <section id="view-painel" class="view active">
+      <div class="painel-bar">
+        <div class="pb-title">EM ANDAMENTO <span id="pbCount">0</span></div>
+        <div class="pb-clock" id="relogio">--:--:--</div>
+      </div>
+      <div class="toolbar">
+        <input type="text" id="buscaPainel" placeholder="Buscar carro, linha, motorista...">
+        <select id="filtroStatus"><option value="">Todos os status</option></select>
+        <span class="filtro-emp" id="filtroEmpresa">
+          <strong>Empresa:</strong>
+          <label><input type="checkbox" value="ALFA"> Via Aurora</label>
+          <label><input type="checkbox" value="BETA"> Horizonte</label>
+          <label><input type="checkbox" value="GAMA"> Via Campo</label>
+          <label><input type="checkbox" value="DELTA"> Expresso Lume</label>
+        </span>
+        <span class="spacer"></span>
+        <span class="legend">
+          <span><i style="background:var(--ok)"></i>&lt; 30 min</span>
+          <span><i style="background:var(--atencao)"></i>30-60 min</span>
+          <span><i style="background:var(--critico)"></i>1-3 h</span>
+          <span><i style="background:#8b1020"></i>&gt; 3 h</span>
+        </span>
+      </div>
+      <div class="emp-legend">
+        <span><i style="background:#2f6fd0"></i>Via Aurora (A)</span>
+        <span><i style="background:#5cc6ef"></i>Horizonte (B)</span>
+        <span><i style="background:#f2c200"></i>Via Campo (G)</span>
+        <span><i style="background:#d83a34"></i>Expresso Lume (D)</span>
+        <span class="sep">|</span>
+        <span>Double Deck = 5 d&iacute;gitos (XXXXX.X)</span>
+        <span>Carro Baixo = 4 d&iacute;gitos (XXXX.X)</span>
+      </div>
+      <div id="board" class="cards-grid"></div>
+    </section>
+
+    <!-- ===================== NOVA OCORRENCIA ===================== -->
+    <section id="view-nova" class="view">
+      <h2 class="section">Abrir ocorrência</h2>
+      <form id="form-ocorrencia" class="form-card" autocomplete="off">
+        <p class="hint">Campos obrigatórios, exceto Observações, Carro que segue e Saída do socorro. O término é preenchido ao concluir o socorro.</p>
+        <input type="hidden" name="id" id="f-id">
+        <div class="grid2">
+          <div>
+            <label>Carro <small>(ex.: 91001.A)</small></label>
+            <input type="text" name="carro" id="f-carro" list="frotaList" placeholder="91001.A" required>
+            <div class="veic-info" id="veicInfo"></div>
+          </div>
+          <div>
+            <label>Carro que segue <small>(opcional)</small></label>
+            <input type="text" name="carroSegue" list="frotaList" placeholder="91002.A">
+          </div>
+        </div>
+        <datalist id="frotaList"></datalist>
+
+        <div class="grid3">
+          <div>
+            <label>Serviço <small>(8 dígitos, ou 8/8 p/ DD)</small></label>
+            <input type="text" name="servico" id="f-servico" inputmode="numeric" pattern="\d{8}(/\d{8})?" placeholder="12345678 ou 12345678/12345678" title="8 dígitos, ou 8/8 dígitos para Double Deck" required>
+          </div>
+          <div><label>Data da ocorrência</label><input type="date" name="dataOcorrencia" id="f-dataOcorrencia" required></div>
+          <div><label>Hora da quebra</label><input type="time" name="horaQuebra" id="f-horaQuebra" required></div>
+        </div>
+
+        <div class="grid2">
+          <div><label>Motorista</label><input type="text" name="motorista" required></div>
+          <div><label>Matrícula</label><input type="text" name="matricula" required></div>
+        </div>
+
+        <div class="grid2">
+          <div><label>Linha</label><select name="linha" id="f-linha" required><option value="">-</option></select></div>
+          <div><label>Local do socorro</label><input type="text" name="localSocorro" placeholder="Via de Demonstração, marco 12" required></div>
+        </div>
+
+        <div class="grid3">
+          <div><label>Data da viagem</label><input type="date" name="dataViagem" required></div>
+          <div><label>Horário da viagem</label><input type="time" name="horarioViagem" required></div>
+          <div><label>Qtd. clientes</label><input type="number" name="qtdClientes" min="0" step="1" placeholder="0" required></div>
+        </div>
+
+        <div class="grid2">
+          <div>
+            <label>Encomendas</label>
+            <span class="radio">
+              <label><input type="radio" name="encomendas" value="Sim"> Sim</label>
+              <label><input type="radio" name="encomendas" value="Não" checked> Não</label>
+            </span>
+          </div>
+          <div>
+            <label>Alimentação fornecida</label>
+            <span class="radio">
+              <label><input type="radio" name="alimentacaoFornecida" value="Sim"> Sim</label>
+              <label><input type="radio" name="alimentacaoFornecida" value="Não" checked> Não</label>
+            </span>
+          </div>
+        </div>
+
+        <label>Defeito passado pelo motorista</label>
+        <textarea name="defeitoMotorista" placeholder="Relato do motorista..." required></textarea>
+
+        <div class="grid2">
+          <div><label>Responsável da manutenção acionado</label><select name="responsavelManutencao" id="f-manutencao" required><option value="">-</option></select></div>
+          <div><label>Saída do socorro <small>(opcional)</small></label><input type="text" name="saidaSocorro" placeholder="SOL - 08:52"></div>
+        </div>
+
+        <div class="grid2">
+          <div><label>Responsável de apoio</label><select name="gerenteRegional" id="f-gerente" required><option value="">-</option></select></div>
+          <div><label>Coordenador</label><input type="text" name="coordenador" required></div>
+        </div>
+
+        <div class="grid2">
+          <div><label>Término do socorro <small>(automático ao concluir)</small></label><input type="time" name="terminoSocorro" id="f-termino" disabled></div>
+          <div><label>Data do término <small>(automático ao concluir)</small></label><input type="date" name="terminoData" id="f-terminoData" disabled></div>
+        </div>
+
+        <label>Observações <small>(opcional)</small></label>
+        <textarea name="obs" placeholder="Observações adicionais..."></textarea>
+
+        <div class="form-actions">
+          <button type="submit" class="btn green">Abrir ocorrência</button>
+          <button type="reset" class="btn yellow">Limpar</button>
+          <button type="button" class="btn ghost" id="cancelarEdicao" style="display:none">Cancelar edição</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- ===================== CADASTROS ===================== -->
+    <section id="view-cadastros" class="view">
+      <h2 class="section">Cadastros base</h2>
+      <div class="subtabs">
+        <button class="btn sub active" data-sub="frota">Frota</button>
+        <button class="btn sub" data-sub="localidades">Localidades / Siglas</button>
+        <button class="btn sub" data-sub="pontos">Pontos de apoio</button>
+        <button class="btn sub" data-sub="gerentes">Responsável de apoio</button>
+        <button class="btn sub" data-sub="linhas">Linhas</button>
+      </div>
+
+      <div id="sub-frota" class="subpanel">
+        <div class="toolbar">
+          <input type="text" id="buscaFrota" placeholder="Buscar carro, placa, regional...">
+          <span class="spacer"></span>
+          <span class="legend"><span id="frotaCount"></span></span>
+          <label class="btn sm blue" style="cursor:pointer">Importar CSV/JSON<input type="file" id="impFrota" accept=".csv,.json" hidden></label>
+        </div>
+        <div class="table-wrap"><table id="tblFrota"></table></div>
+      </div>
+
+      <div id="sub-localidades" class="subpanel" style="display:none">
+        <div class="toolbar">
+          <input type="text" id="loc-sigla" placeholder="Sigla (SOL)" style="max-width:120px">
+          <input type="text" id="loc-nome" placeholder="Nome (Estação Solar)">
+          <input type="text" id="loc-uf" placeholder="UF" style="max-width:80px">
+          <button class="btn green sm" id="addLoc">Adicionar</button>
+          <input type="text" id="buscaLoc" placeholder="Buscar sigla/nome..." style="max-width:220px">
+          <span class="legend" id="locCount"></span>
+          <span class="spacer"></span>
+          <label class="btn sm blue" style="cursor:pointer">Importar KML/CSV/JSON<input type="file" id="impLoc" accept=".kml,.csv,.json" hidden></label>
+        </div>
+        <div class="table-wrap"><table id="tblLoc"></table></div>
+      </div>
+
+      <div id="sub-pontos" class="subpanel" style="display:none">
+        <div class="toolbar">
+          <input type="text" id="pa-nome" placeholder="Nome do ponto">
+          <input type="text" id="pa-sigla" placeholder="Sigla local" style="max-width:120px">
+          <input type="text" id="pa-tipo" placeholder="Tipo (posto, oficina...)" style="max-width:180px">
+          <button class="btn green sm" id="addPa">Adicionar</button>
+          <input type="text" id="buscaPa" placeholder="Buscar nome/sigla/tipo..." style="max-width:240px">
+          <span class="legend" id="paCount"></span>
+          <span class="spacer"></span>
+          <label class="btn sm blue" style="cursor:pointer">Importar KML/CSV/JSON<input type="file" id="impPa" accept=".kml,.csv,.json" hidden></label>
+        </div>
+        <div class="table-wrap"><table id="tblPa"></table></div>
+      </div>
+
+      <div id="sub-gerentes" class="subpanel" style="display:none">
+        <div class="toolbar">
+          <input type="text" id="ger-nome" placeholder="Nome do responsável">
+          <input type="text" id="ger-tel" placeholder="Contato fictício (opcional)" style="max-width:260px">
+          <button class="btn green sm" id="addGer">Salvar</button>
+          <span class="spacer"></span>
+          <span class="legend" id="gerCount"></span>
+        </div>
+        <div class="table-wrap"><table id="tblGer"></table></div>
+        <p class="hint" style="color:#cdd3f0">Dica: para editar, clique em "editar" na linha (preenche os campos) e clique em Salvar. O telefone (opcional) entra no texto de WhatsApp.</p>
+      </div>
+
+      <div id="sub-linhas" class="subpanel" style="display:none">
+        <div class="toolbar">
+          <input type="text" id="linha-nova" placeholder="Nova linha (ex.: SOL x LUA)">
+          <button class="btn green sm" id="addLinha">Adicionar</button>
+          <input type="text" id="buscaLinha" placeholder="Buscar linha..." style="max-width:220px">
+          <span class="legend" id="linhaCount"></span>
+        </div>
+        <div class="table-wrap"><table id="tblLinhas"></table></div>
+      </div>
+    </section>
+
+    <!-- ===================== HISTORICO ===================== -->
+    <section id="view-historico" class="view">
+      <h2 class="section">Histórico de ocorrências finalizadas</h2>
+      <div class="toolbar">
+        <input type="text" id="buscaHist" placeholder="Buscar...">
+        <span class="filtro-emp" id="histEmpresa">
+          <strong>Empresa:</strong>
+          <label><input type="checkbox" value="ALFA"> Via Aurora</label>
+          <label><input type="checkbox" value="BETA"> Horizonte</label>
+          <label><input type="checkbox" value="GAMA"> Via Campo</label>
+          <label><input type="checkbox" value="DELTA"> Expresso Lume</label>
+        </span>
+        <span class="filtro-data">
+          <strong>Data:</strong>
+          <label>De <input type="date" id="histDe"></label>
+          <label>Até <input type="date" id="histAte"></label>
+          <button class="btn ghost sm" id="histLimpar">Limpar</button>
+        </span>
+        <span class="spacer"></span>
+        <button class="btn blue sm" id="expCSV">Exportar CSV</button>
+        <button class="btn blue sm" id="expJSON">Exportar JSON</button>
+        <button class="btn ghost sm" id="backup">Backup completo</button>
+        <label class="btn ghost sm" style="cursor:pointer">Restaurar backup<input type="file" id="restore" accept=".json" hidden></label>
+      </div>
+      <div class="table-wrap"><table id="tblHist"></table></div>
+    </section>
+  </main>
+
+  <!-- ===================== MODAL DETALHE ===================== -->
+  <div class="overlay" id="overlay">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="m-titulo" tabindex="-1">
+      <div class="modal-head">
+        <h3 id="m-titulo">Ocorrencia</h3>
+        <span id="m-status"></span>
+        <button class="btn wine sm x" id="m-fechar">Fechar</button>
+      </div>
+      <div class="modal-body" id="m-body"></div>
+    </div>
+  </div>
+
+  <footer class="app-footer">
+    <span id="modoChip" class="modo-chip">Demo local</span>
+    <span class="ver-chip">DEMO 1.0</span>
+    Rota Demo · Todos os dados iniciais são fictícios
+  </footer>
+
+  <script src="assets/data.seed.js"></script>
+  <script src="assets/store.js"></script>
+  <script src="assets/app.js"></script>
+  <script src="assets/demo.js"></script>
+</body>
+</html>
